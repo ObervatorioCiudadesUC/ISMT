@@ -15,15 +15,45 @@ library(homals)
 
 #carpeta de trabajo
 dir_loc <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Output"
-indic_final <- readRDS(glue("{dir_loc}/Censo2017_ISMT_hogares.Rds"))
+indic_sl <- readRDS(glue("{dir_loc}/Censo2017_ISMT_hogares_v2.Rds"))
 
+indic_sl <- indic_sl %>% select(ptje_esc, ptje_hacin, ptje_mater)
+#Remove NAs
+indic_sl <- na.omit(indic_sl)
 
-indic_sel <- indic_final %>% select(ptje_esc, ptje_hacin, ptje_mater)
+indic_sl_s <- indic_sl %>% sample_n(1000000)
 
-hom <- homals(indic_sel,  ndim = 1, rank = 1, level = "numerical", sets = 0, active = TRUE,
+hom <- homals(indic_sl,  ndim = 1, rank = 1, level = "numerical", sets = 0, active = TRUE,
            eps = 1e-06, itermax = 1000, verbose = 0)
 
+memory.limit()
 
+# Ver hom
+# Sample 1mill valores
 hom
+# Eigenvalues:
+#   D1 
+# 0.067 
+# 
+# Variable Loadings:
+#   D1
+# ptje_esc   -0.3999909
+# ptje_hacin -0.2686852
+# ptje_mater  0.4118807
 
-plot("hom")
+# Analisis de componentes principales
+
+pca <- prcomp(indic_sl)
+pca
+summary(pca)
+
+# ------------PC1        PC2        PC3
+# ptje_esc   -0.7271375  0.5965606  0.3396859
+# ptje_hacin -0.5951240 -0.7944328  0.1212602
+# ptje_mater -0.3421967  0.1139823 -0.9326894
+
+# -----------------------PC1      PC2      PC3
+# Standard deviation     170.774 150.1786 125.6744
+# Proportion of Variance   0.432   0.3341   0.2339
+# Cumulative Proportion    0.432   0.7661   1.0000
+
