@@ -1,10 +1,9 @@
 # Sacar notacion cientifica
 options(scipen=999)
 
-# install.packages (c("tidyverse","glue", "sf"))
+# install.packages (c("tidyverse","glue", "haven"))
 library(tidyverse)
 library(glue)
-library(sf)
 library(haven)
 
 # Setear directorio local - Cambiar el nombre a la ubicacion de la carpeta de trabajo personal

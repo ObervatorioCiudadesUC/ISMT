@@ -23,8 +23,33 @@ base_rm <- readRDS(glue("{in_dir}/Censo2017_Personas_ZC_RM.Rds"))
 
 head(base_rm)
 summary(base_rm)
+summary(base_rm$cant_hog)
+summary(base_rm$cant_hog)
 
-# Probar codigo conun subset
+base_rm <- base_rm %>% 
+  # filtrar tipo hogar y ocupacion de la vivienda
+  filter(p01 < 8 & p02==1) %>% 
+  mutate(
+  #Número de piezas usadas exclusivamente como dormitorio
+  p04 = case_when(
+    p04 == 98 ~ NA_integer_,
+    p04 == 99 ~ NA_integer_,
+    TRUE~ p04
+  ),
+  # Cantidad de hogares por vivienda
+  cant_hog = case_when(
+    cant_hog == 98 ~ NA_integer_,
+    cant_hog == 99 ~ NA_integer_,
+    TRUE ~ cant_hog
+  ),
+  nhogar = case_when(
+    cant_hog == 98 ~ NA_integer_,
+    cant_hog == 99 ~ NA_integer_,
+    TRUE ~ cant_hog
+  )
+)
+
+# Probar codigo con un subset
 # subset_rm <- base_rm %>% filter(id_zona_loc==1279)
 
 # seleccionar variables y definir tramos edades
@@ -98,8 +123,9 @@ esc_materialidad <- escolaridad %>% mutate(
 
 # Hacinamiento ------------------------------------------------------------
 # Personas / num. dormitorios
-esc_mat_hacinam <- esc_materialidad %>% mutate(
-  ind_hacinam = case_when(
+esc_mat_hacinam <- esc_materialidad %>% 
+ mutate(
+ ind_hacinam = case_when(
     p04 >= 1 ~ cant_per/p04,
     # Indice Sin dormitorios se elige de tal manera que: 
     # 1 persona viviendo en un estudio no presenta hacinamiento, 
@@ -113,9 +139,27 @@ esc_mat_hacinam <- esc_materialidad %>% mutate(
 summary(esc_mat_hacinam$ind_hacinam)
 summary(esc_mat_hacinam$ind_mater)
 
+
+# Agregar allegamiento ----------------------------------------------------
+
+esc_mat_hacinam_all <- esc_mat_hacinam %>% 
+  mutate(
+    n_hog_alleg = (cant_hog - 1)
+  )
+
+summary(esc_mat_hacinam_all$n_hog_alleg)
+
+#Revisar las viviendas con más de 20 hogares - comunas Santiago, Estacion Central, Q Normal, Buin
+test <- esc_mat_hacinam_all %>% filter(n_hog_alleg>20) %>% 
+  mutate(geocode = (comuna*1000000)+(dc*10000)+(1*1000)+(zc_loc),
+         geocode = as.character(geocode)) %>% 
+  select(geocode, provincia, comuna, dc, area, zc_loc, cant_hog, cant_per)
+
+
 # Asignar puntajes  -------------------------------------------------------
 
-indic_final <- esc_mat_hacinam %>% 
+# indic_final <- esc_mat_hacinam %>% 
+indic_final2 <- esc_mat_hacinam_all %>% 
   mutate(
     # # Calculo puntaje escolaridad
     # ptje_esc = case_when(
@@ -138,28 +182,46 @@ indic_final <- esc_mat_hacinam %>%
     #   mat_aceptable == 1   ~ 1000,
     #   mat_recuperable == 1 ~ 600,
     #   mat_irrecup == 1     ~ 200
-    # Indice de hacinamiento pasarlo a valor negativo
+    # Indice de hacinamiento y allegamiento pasarlo a valor negativo
     ind_hacinam_ = -1 * ind_hacinam, 
+    ind_alleg = -1 * n_hog_alleg, 
     # z scores
     z_ptje_esc = as.numeric(scale(a_esc_cont)),
     z_ptje_hacin = as.numeric(scale(ind_hacinam_)),
     z_ptje_mater = as.numeric(scale(ind_mater)),
+    z_ptje_alleg = as.numeric(scale(ind_alleg)),
     # Valores escalados
     ptje_esc = (a_esc_cont-min(a_esc_cont, na.rm = TRUE))/(max(a_esc_cont, na.rm = TRUE)-min(a_esc_cont, na.rm = TRUE)) * 1000,
     ptje_hacin = (ind_hacinam_-min(ind_hacinam_, na.rm = TRUE))/(max(ind_hacinam_, na.rm = TRUE)-min(ind_hacinam_, na.rm = TRUE)) * 1000,
-    ptje_mater = (ind_mater-min(ind_mater, na.rm = TRUE))/(max(ind_mater, na.rm = TRUE)-min(ind_mater, na.rm = TRUE)) *1000
+    ptje_mater = (ind_mater-min(ind_mater, na.rm = TRUE))/(max(ind_mater, na.rm = TRUE)-min(ind_mater, na.rm = TRUE)) *1000,
+    ptje_alleg = (ind_alleg-min(ind_alleg, na.rm = TRUE))/(max(ind_alleg, na.rm = TRUE)-min(ind_alleg, na.rm = TRUE)) *1000
   ) %>% 
   select(region, provincia, comuna, dc, zc_loc, id_zona_loc, nviv, nhogar, personan,
          esc_recode, esc_cat1, esc_cat2, esc_cat3, esc_cat4, esc_cat5, esc_cat6, esc_cat7,
          cond_muro, cond_cubierta, cond_suelo, 
          mat_aceptable, mat_irrecup, mat_recuperable,  
-         sin_hacin, hacin_medio, hacin_critico, a_esc_cont, ind_hacinam_, ind_mater,
-         z_ptje_esc, z_ptje_hacin, z_ptje_mater,
-         ptje_esc, ptje_hacin, ptje_mater)
+         sin_hacin, hacin_medio, hacin_critico, a_esc_cont, ind_hacinam_, ind_mater, ind_alleg,
+         z_ptje_esc, z_ptje_hacin, z_ptje_mater, z_ptje_alleg,
+         ptje_esc, ptje_hacin, ptje_mater, ptje_alleg)
 
-summary(indic_final$ptje_esc)
-summary(indic_final$ptje_hacin)
-summary(indic_final$ptje_mater)
+summary(indic_final2$ptje_esc)
+summary(indic_final2$ptje_hacin)
+summary(indic_final2$ptje_mater)
+summary(indic_final2$ptje_alleg)
 
-indic_final %>% write.csv2(glue("{out_dir}/Censo2017_ISMT_hogares_v2.csv"))
-indic_final %>% saveRDS(glue("{out_dir}/Censo2017_ISMT_hogares_v2.Rds"))
+# summary(indic_final2$ptje_esc)
+# Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+# 0.0   428.6   571.4   563.2   714.3  1000.0   43126 
+# > summary(indic_final2$ptje_hacin)
+# Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+# 0.0   979.7   984.2   983.0   988.7  1000.0   77655 
+# > summary(indic_final2$ptje_mater)
+# Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+# 0.0  1000.0  1000.0   978.3  1000.0  1000.0   32939 
+# > summary(indic_final2$ptje_alleg)
+# Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
+# 0    1000    1000     999    1000    1000    2324 
+
+
+indic_final2 %>% write.csv2(glue("{out_dir}/Censo2017_ISMT_hogares_v3.csv"))
+indic_final2 %>% saveRDS(glue("{out_dir}/Censo2017_ISMT_hogares_v3.Rds"))

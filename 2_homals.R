@@ -9,24 +9,27 @@
 
 # install.packages(c("tidyverse", "glue", "homals"))
 
-library(tidyverse)
+library(dplyr)
 library(glue)
 library(homals)
 
 #carpeta de trabajo
 dir_loc <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Output"
-indic_sl <- readRDS(glue("{dir_loc}/Censo2017_ISMT_hogares_v2.Rds"))
+# indic_sl <- readRDS(glue("{dir_loc}/Censo2017_ISMT_hogares_v2.Rds"))
+indic_sl <- readRDS(glue("{dir_loc}/Censo2017_ISMT_hogares_v3.Rds"))
 
-indic_sl <- indic_sl %>% select(ptje_esc, ptje_hacin, ptje_mater)
+#Agregar puntaje allegamiento
+indic_sl <- indic_sl %>% select(ptje_esc, ptje_hacin, ptje_mater, ptje_alleg)
 #Remove NAs
 indic_sl <- na.omit(indic_sl)
 
-indic_sl_s <- indic_sl %>% sample_n(1000000)
+indic_sl <- indic_sl %>% sample_n(1000000)
 
 hom <- homals(indic_sl,  ndim = 1, rank = 1, level = "numerical", sets = 0, active = TRUE,
            eps = 1e-06, itermax = 1000, verbose = 0)
 
-memory.limit()
+#Revisar limite de uso de memoria R
+# memory.limit()
 
 # Ver hom
 # Sample 1mill valores
@@ -57,3 +60,28 @@ summary(pca)
 # Proportion of Variance   0.432   0.3341   0.2339
 # Cumulative Proportion    0.432   0.7661   1.0000
 
+# incluyen allegamiento - sample 500mil 
+
+# Eigenvalues:
+#   D1 
+# 0.0412 
+# 
+# Variable Loadings:
+#   D1
+# ptje_esc   -0.2842796
+# ptje_hacin -0.3217238
+# ptje_mater  0.2930686
+# ptje_alleg  0.2429153
+
+# incluyen allegamiento - sample 1 millon
+
+# Eigenvalues:
+#   D1
+# 0.0413
+# 
+# Variable Loadings:
+#   D1
+# ptje_esc   -0.2783314
+# ptje_hacin -0.3271089
+# ptje_mater  0.2867274
+# ptje_alleg  0.2522210
