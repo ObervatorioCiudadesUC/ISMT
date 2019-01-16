@@ -89,30 +89,21 @@ escolaridad <- base_rm_hog %>% mutate(
 
 esc_materialidad <- escolaridad %>% mutate(
   cond_muro = case_when(
-    # Aceptable
-     p03a >= 1 & p03a <= 3 ~ 3L,
-    # Recuperable    
-     p03a >3 & p03a   <= 5 ~ 2L,
-    # Irrecuperable
-     p03a >5 & p03a   <= 7 ~ 1L,
+    p03a %in% c(1, 2, 3) ~ 3L, # Aceptable - Hormigón, armado; albañilería, tabique forrado por ambas caras
+    p03a %in% c(4, 5) ~ 2L, # Recuperable  - Tabique sin forro interior; Adobe o quincha
+    p03a %in% c(6) ~ 1L, # Irrecuperable - Materiales precarios o de desechos.
     TRUE ~ NA_integer_
   ),
   cond_cubierta = case_when(
-    # Aceptable
-    p03b >= 1 & p03b <= 3  ~ 3L,
-    # Recuperable    
-    p03b >3 & p03b <= 5    ~ 2L,
-    # Irrecuperable
-    p03b >5 & p03b <= 7    ~ 1L,
+    p03b %in% c(1, 2, 3) ~ 3L, # Aceptable - Tejas o tejuela, fibrocemento, losa hormigón, planchas zinc
+    p03b %in% c(4, 5) ~ 2L, # Recuperable - Fonolita; paja, coirón, totora o caña     
+    p03b %in% c(6, 7) ~ 1L, # Irrecuperable - Materiales precarios o de desecho; sin cubierta en el techo
     TRUE ~ NA_integer_
   ),
   cond_suelo = case_when(
-    # Aceptable
-    p03c == 1 & p03c <= 3 ~ 3L,
-    # Recuperable    
-    p03c >1 & p03c <= 4   ~ 2L,
-    # Irrecuperable
-    p03c == 5             ~ 1L,
+    p03c %in% c(1) ~ 3L, # Aceptable - Parquet, madera, piso flotante o similar; cerámico, flexit; alfombra o cubre piso
+    p03c %in% c(2, 3, 4) ~ 2L, # Recuperable - Baldosa de cemento, radier, capa de cemento
+    p03c %in% c(5) ~ 1L, # Irrecuperable - Piso de tierra
     TRUE ~ NA_integer_
   ),
   mat_aceptable   = if_else(cond_muro == 3 & cond_cubierta == 3 & cond_suelo == 3, 1L, 0L),
