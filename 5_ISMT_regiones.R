@@ -20,7 +20,7 @@ library(sf)
 in_dir <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/14_Microdatos/Clean_Personas"
 ismt_dir <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Output"
 auc_dir <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/02_Insumos/Zonas Censales AUC_2017"
-hist_dir <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Historico/Output"
+hist_dir <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/11_Accesibilidad/Data/Output"
 
 # aumentar limite memoria - usando pendrive
 # memory.limit(16000)
@@ -33,7 +33,7 @@ data_rm <- readRDS(glue("{hist_dir}/Censo1992_2017_Persona_CleanList_R13.Rds"))
 data_rm <- data_rm[['2017']]
 
 # Censo Regiones 04 y 08
-data_r08 <- readRDS(glue("{in_dir}/Data Requests/Censo2017_r04_r08_ISMT.Rds")) %>% mutate(as.integer(region)) %>% 
+data_r08 <- readRDS(glue("{in_dir}/Data Requests/Censo2017_r04_r08_ISMT.Rds")) %>% mutate(region=as.integer(region)) %>% 
   #split(.$region)
   filter(region == 8) 
 
@@ -42,9 +42,24 @@ data_r08 <- readRDS(glue("{in_dir}/Data Requests/Censo2017_r04_r08_ISMT.Rds")) %
 geo_r08 <- st_read(glue("{auc_dir}/R08_Concepcion")) %>% rename_all(tolower) %>% select(geocodigo, geometry)
 geo_r13 <- st_read(glue("{auc_dir}/R13_Santiago")) %>% rename_all(tolower) %>% select(geocodigo, geometry)
 
+# Unir dataframes en lista
+data <- list(data_rm, data_r08) %>% set_names(c("13", "8"))
+
 # Inner join shape con data censo
-data[['4']] <- data[['4']] %>%  inner_join(as.data.frame(geo_r04), by = c("geocode"="geocodigo")) %>% select(-geometry)
+# data[['4']] <- data[['4']] %>%  inner_join(as.data.frame(geo_r04), by = c("geocode"="geocodigo")) %>% select(-geometry)
 data[['8']] <- data[['8']] %>%  inner_join(as.data.frame(geo_r08), by = c("geocode"="geocodigo")) %>% select(-geometry)
+data[['13']] <- data[['13']] %>%  inner_join(as.data.frame(geo_r13), by = c("geocode"="geocodigo")) %>% select(-geometry)
+
+
+# Calcular numero mayores 60 años por hogar -------------------------------
+
+mayores60_hog <- data %>%  bind_rows() %>% group_by(year, region, comuna, geocode, folio, nviv, nhogar) %>% 
+  mutate(dummy_pers = 1) %>% 
+  #Mayores de 60 años por hogar
+  summarise(
+  pers_60 = sum(if_else(edad >= 60, dummy_pers ,0), na.rm=TRUE),
+  pers_tot = sum(dummy_pers, na.rm=TRUE)
+) %>% ungroup()
 
 # Nuevas variables nivel vivienda --------------------------------------------------
 
@@ -101,23 +116,31 @@ data_clean <- map2(data, names(data),
     ptje_mater = (ind_mater-min(ind_mater, na.rm = TRUE))/(max(ind_mater, na.rm = TRUE)-min(ind_mater, na.rm = TRUE)) *1000,
     ptje_alleg = (ind_alleg-min(ind_alleg, na.rm = TRUE))/(max(ind_alleg, na.rm = TRUE)-min(ind_alleg, na.rm = TRUE)) *1000
   ) %>% 
+  # Unir personas mayores 60 por hogar
+  left_join(mayores60_hog, by = c("year", "region", "comuna", "geocode", "folio", "nviv", "nhogar")) %>% 
   split(.$region)
 
 # Guardar Dataset nivel hogar - ISMT
-data_clean %>% saveRDS(glue("{ismt_dir}/Censo2017_Hogar_ISMT_R04_R08.Rds"))
+data_clean %>% saveRDS(glue("{ismt_dir}/Censo2017_Hogar_ISMT_R13_R08.Rds"))
 
 ####### Calcular homals
 
 # leer archivo si se parte desde aquí 
-data_clean <- readRDS(glue("{ismt_dir}/Censo2017_Hogar_ISMT_R04_R08.Rds"))
+data_clean <- readRDS(glue("{ismt_dir}/Censo2017_Hogar_ISMT_R13_R08.Rds"))
 
 # Calculo ISMT ------------------------------------------------------------
 
-# Coeff homals R04 - ISMT 2017 
-Esc4 <- 0.2808857  ### Escolaridad Puntaje
-Viv4 <- 0.2996181  ### Calidad Vivienda
-Hac4 <- 0.3224852  ### Hacinamiento
-All4 <- 0.2520207  ### Allegamiento
+# # Coeff homals R04 - ISMT 2017 
+# Esc4 <- 0.2808857  ### Escolaridad Puntaje
+# Viv4 <- 0.2996181  ### Calidad Vivienda
+# Hac4 <- 0.3224852  ### Hacinamiento
+# All4 <- 0.2520207  ### Allegamiento
+
+# Coeff homals RM - ISMT 2017 
+Esc13 <- 0.2783314  ### Escolaridad Puntaje
+Viv13 <- 0.2867274  ### Calidad Vivienda
+Hac13 <- 0.3271089  ### Hacinamiento
+All13 <- 0.2522210  ### Allegamiento
 
 # Coeff homals R08 - ISMT 2017 
 Esc8 <- 0.3169055  ### Escolaridad Puntaje
@@ -126,10 +149,10 @@ Hac8 <- 0.2881263  ### Hacinamiento
 All8 <- 0.1012507  ### Allegamiento
 
 # Calcular puntaje ISMT Serena
-data_clean[['4']] <- data_clean[['4']] %>% 
+data_clean[['13']] <- data_clean[['13']] %>% 
   # Calculo ISMT - pesos según homals
   mutate(
-    ptje_raw = (ptje_esc*Esc4) + (ptje_hacin*Hac4) + (ptje_mater*Viv4) + (ptje_alleg*All4),
+    ptje_raw = (ptje_esc*Esc13) + (ptje_hacin*Hac13) + (ptje_mater*Viv13) + (ptje_alleg*All13),
     ptje_ISMT = (ptje_raw-min(ptje_raw, na.rm = TRUE))/(max(ptje_raw, na.rm = TRUE)-min(ptje_raw, na.rm = TRUE)) # puntaje ISMT normalizado
   ) 
 
@@ -144,17 +167,17 @@ data_clean[['8']] <- data_clean[['8']] %>%
 # Calcular centiles para GSE ----------------------------------------------
 
 # Calcular centiles
-quant_R04 <- quantile(data_clean[['4']]$ptje_ISMT, probs = seq(0, 1, 0.01), na.rm=TRUE) %>% as.data.frame()
+quant_R013 <- quantile(data_clean[['13']]$ptje_ISMT, probs = seq(0, 1, 0.01), na.rm=TRUE) %>% as.data.frame()
 quant_R08 <- quantile(data_clean[['8']]$ptje_ISMT, probs = seq(0, 1, 0.01), na.rm=TRUE) %>% as.data.frame()
 
-rownames(quant_R04)
+rownames(quant_R013)
 
-# Determinar tope centil GSE x ciudad ( x <= R04_E) ( x > R04_E & x <= R04_D )
-R04_E <- quant_R04["6%",]
-R04_D <- quant_R04["36%",]
-R04_C3 <- quant_R04["64%",]
-R04_C2 <- quant_R04["79%",]
-R04_ABC1 <- quant_R04["100%",]
+# Determinar tope centil GSE x ciudad ( x <= R013_E) ( x > R013_E & x <= R013_D )
+R013_E <- quant_R013["6%",]
+R013_D <- quant_R013["36%",]
+R013_C3 <- quant_R013["64%",]
+R013_C2 <- quant_R013["79%",]
+R013_ABC1 <- quant_R013["100%",]
 
 R08_E <- quant_R08["6%",]
 R08_D <- quant_R08["36%",]
@@ -178,9 +201,9 @@ data_hog <- data_clean %>%
   left_join(pct40, by="region") %>%
   mutate(
     # pctrank_ISMT = percent_rank(ptje_ISMT), # esto tiene ser por año
-    hog40vuln_ISMT = if_else(ptje_ISMT <= pct40ISMT, 1L, 0L), # determinar si vivienda pertenece a quantil 0.4 anual
+    hog40vuln_ISMT = if_else(ptje_ISMT <= pct40ISMT, 1L, 0L), # determinar si vivienda pertenece a quantil 0.13 anual
     # Agregar nombre ciudad
-    ciudad = if_else(region == 4, "La Serena-Coquimbo", "Concepcion")
+    ciudad = if_else(region == 13, "Santiago", "Concepcion")
   )
 
 head(data_hog)  
@@ -216,6 +239,8 @@ data_hog_summ <- data_hog %>%
   group_by(year, region, comuna, geocode, manzent) %>% 
   summarise(
     n_hog = sum(hogar),
+    pers_60 = sum(pers_60),
+    pers_tot = sum(pers_tot),
     # med_esc_jh = median(esc_jh, na.rm = TRUE),
     esc_jh = mean(esc_jh, na.rm = TRUE),
     # ind_hac = median(ind_hacinam, na.rm = TRUE),
@@ -238,11 +263,11 @@ data_hog_summ <- data_hog %>%
     pct_vuln = h_40pct/n_hog,
     GSE_ave = case_when(
       # La Serena
-      region == 4 & ISMTptj <= R04_E ~ "E",
-      region == 4 & ISMTptj > R04_E & ISMTptj <= R04_D ~ "D",
-      region == 4 & ISMTptj > R04_D & ISMTptj <= R04_C3 ~ "C3",
-      region == 4 & ISMTptj > R04_C3 & ISMTptj  <= R04_C2 ~ "C2",
-      region == 4 & ISMTptj > R04_C2 & ISMTptj  <= R04_ABC1 ~ "ABC1",
+      region == 13 & ISMTptj <= R013_E ~ "E",
+      region == 13 & ISMTptj > R013_E & ISMTptj <= R013_D ~ "D",
+      region == 13 & ISMTptj > R013_D & ISMTptj <= R013_C3 ~ "C3",
+      region == 13 & ISMTptj > R013_C3 & ISMTptj  <= R013_C2 ~ "C2",
+      region == 13 & ISMTptj > R013_C2 & ISMTptj  <= R013_ABC1 ~ "ABC1",
       # Concepcion
       region == 8 & ISMTptj <= R08_E ~ "E",
       region == 8 & ISMTptj > R08_E & ISMTptj <= R08_D ~ "D",
@@ -250,13 +275,14 @@ data_hog_summ <- data_hog %>%
       region == 8 & ISMTptj > R08_C3 & ISMTptj  <= R08_C2 ~ "C2",
       region == 8 & ISMTptj > R08_C2 & ISMTptj  <= R08_ABC1 ~ "ABC1"
     )
-  ) %>% 
+  ) %>% ungroup() %>% 
   as.data.frame() %>% 
+  mutate(pct_60a = pers_60/pers_tot) %>% 
   split(.$region)
 
 
 # Unir info a shapes
-geo_r04 <- geo_r04 %>% left_join(data_hog_summ[['4']], by = c("geocodigo"="geocode"))
+geo_r13 <- geo_r13 %>% left_join(data_hog_summ[['13']], by = c("geocodigo"="geocode"))
 geo_r08 <- geo_r08 %>% left_join(data_hog_summ[['8']], by = c("geocodigo"="geocode"))
 
 # Plotear shapes ----------------------------------------------------------
@@ -264,7 +290,7 @@ geo_r08 <- geo_r08 %>% left_join(data_hog_summ[['8']], by = c("geocodigo"="geoco
 # Plotear mapa con color por puntaje ISMT
 
 # La Serena
-mapa_ISMT04 <- ggplot(data = geo_r04, aes(fill = ISMTptj)) + 
+mapa_ISMT13 <- ggplot(data = geo_r13, aes(fill = ISMTptj)) + 
   geom_sf(lwd = 0) +
   scale_fill_gradient(name = "Puntaje ISMT", 
                       low = "#d53e4f", 
@@ -274,7 +300,7 @@ mapa_ISMT04 <- ggplot(data = geo_r04, aes(fill = ISMTptj)) +
   ) +
   theme(axis.text.x = element_blank(), axis.text.y = element_blank()) 
 # Plotearlo con legenda m
-mapa_ISMT04 +  labs(title ="ISMT La Serena-Coquimbo",
+mapa_ISMT13 +  labs(title ="ISMT Santiago",
                      subtitle = NULL,
                      caption = NULL) 
 
@@ -295,8 +321,8 @@ mapa_ISMT08 +  labs(title ="Concepción",
 
 # Save datasets ----------------------------------------------------
 
-geo_r04 %>%  st_write("C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Regiones/Output/Shapefiles/ISMT_Serena/ISMT_Serena.shp", quiet = TRUE,  delete_layer = TRUE)
-geo_r08 %>%  st_write("C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Regiones/Output/Shapefiles/ISMT_Conce/ISMT_Conce.shp", quiet = TRUE,  delete_layer = TRUE)
+geo_r13 %>%  st_write("C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Regiones/Output/Shapefiles_60/ISMT_Santiago/ISMT_Stgo.shp", quiet = TRUE,  delete_layer = TRUE)
+geo_r08 %>%  st_write("C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Regiones/Output/Shapefiles_60/ISMT_Conce/ISMT_Conce.shp", quiet = TRUE,  delete_layer = TRUE)
 
-test4 <- st_read("C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Regiones/Output/Shapefiles/ISMT_Serena")
-test8 <- st_read("C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Regiones/Output/Shapefiles/ISMT_Conce")
+test13 <- st_read("C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Regiones/Output/Shapefiles_60/ISMT_Santiago")
+test8 <- st_read("C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Regiones/Output/Shapefiles_60/ISMT_Conce")
