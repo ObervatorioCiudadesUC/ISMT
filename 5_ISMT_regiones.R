@@ -20,6 +20,7 @@ library(sf)
 in_dir <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/14_Microdatos/Clean_Personas"
 ismt_dir <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Output"
 auc_dir <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/02_Insumos/Zonas Censales AUC_2017"
+hist_dir <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Historico/Output"
 
 # aumentar limite memoria - usando pendrive
 # memory.limit(16000)
@@ -27,14 +28,19 @@ auc_dir <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/02_Insumos/Zonas C
 
 # Leer archivo Censo  vars homogeneas -----------------------------------------
 
-# Regiones 04 y 08
-data <- readRDS(glue("{in_dir}/Data Requests/Censo2017_r04_r08_ISMT.Rds")) %>% mutate(as.integer(region)) %>% 
-  split(.$region)
+# Censo rm - filtrar año 2017 
+data_rm <- readRDS(glue("{hist_dir}/Censo1992_2017_Persona_CleanList_R13.Rds"))
+data_rm <- data_rm[['2017']]
+
+# Censo Regiones 04 y 08
+data_r08 <- readRDS(glue("{in_dir}/Data Requests/Censo2017_r04_r08_ISMT.Rds")) %>% mutate(as.integer(region)) %>% 
+  #split(.$region)
+  filter(region == 8) 
 
 # Leer shapes Area Urbana Consolidada
 # geo_r04 <- st_read(glue("{auc_dir}/R04_LaSerena")) %>% rename_all(tolower) %>% select(geocodigo, geometry)
 geo_r08 <- st_read(glue("{auc_dir}/R08_Concepcion")) %>% rename_all(tolower) %>% select(geocodigo, geometry)
-geo_r08 <- st_read(glue("{auc_dir}/R08_Concepcion")) %>% rename_all(tolower) %>% select(geocodigo, geometry)
+geo_r13 <- st_read(glue("{auc_dir}/R13_Santiago")) %>% rename_all(tolower) %>% select(geocodigo, geometry)
 
 # Inner join shape con data censo
 data[['4']] <- data[['4']] %>%  inner_join(as.data.frame(geo_r04), by = c("geocode"="geocodigo")) %>% select(-geometry)
