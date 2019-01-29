@@ -1,10 +1,10 @@
-# Nombre Programa: Ponderacion Homnals
+# Nombre Programa: 3_Indicador_final.R
 # Ubicacion: GitHub/ISMT
-# Autor: Ricardo Truffello
+# Autor: Ricardo Truffello - Monica Flores
 # Fecha Creacion: 19/12/2018
 # Proyecto: ISMT
 # Objetivo: Calcular Indice Sociomaterial 
-# Output: C:/Users/Ricardo Truffello/Desktop  ### LOL :D
+# Output: C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Output
 # Notas:
 
 # Sacar notacion cientifica
@@ -46,7 +46,7 @@ All <- 0.2522210  ### Allegamiento
 
 indic_sel <- Base_RM %>%  
   ### Generacion de Codigo Zona Censal
-  mutate(geocode = (comuna*1000000)+(dc*10000)+(1*1000)+(zc_loc),
+  mutate(geocode = (comuna*1000000)+(dc*10000)+(area*1000)+(zc_loc),
          geocode = as.character(geocode)) %>% 
   select(geocode, ptje_esc, ptje_hacin, ptje_mater, ptje_alleg)
 
@@ -77,7 +77,7 @@ summary(indic_sel)
 # -------------------3rd Qu.: 714.3   3rd Qu.: 988.71   3rd Qu.:1000.0   3rd Qu.:1000   3rd Qu.:1061.2   3rd Qu.:0.8787  
 # -------------------Max.   :1000.0   Max.   :1000.00   Max.   :1000.0   Max.   :1000   Max.   :1144.4   Max.   :1.0000 
 
-### Definicion Quantiles
+### Definicion Centiles
 quant <- quantile(indic_sel$ptje_fnorm, probs = seq(0, 1, 0.01)) ### Esta dando super mal la distribucion :/ - sigue mal :(
 #40% = 0.7784421
 # 40% - 0.8078167 cuando se incluye allegamiento

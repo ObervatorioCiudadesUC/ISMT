@@ -16,17 +16,23 @@ library(homals)
 #carpeta de trabajo
 dir_loc <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Output"
 # indic_sl <- readRDS(glue("{dir_loc}/Censo2017_ISMT_hogares_v2.Rds"))
-indic_sl <- readRDS(glue("{dir_loc}/Censo2017_ISMT_hogares_v3.Rds"))
+# indic_sl <- readRDS(glue("{dir_loc}/Censo2017_ISMT_hogares_v3.Rds"))
+indic_sl <- readRDS(glue("{dir_loc}/Censo2017_Hogar_ISMT_R04_R08.Rds"))
 
 #Agregar puntaje allegamiento
-indic_sl <- indic_sl %>% select(ptje_esc, ptje_hacin, ptje_mater, ptje_alleg)
+indic_sl <- map2(indic_sl, names(indic_sl), 
+                              ~dplyr::select(.x, ptje_esc, ptje_hacin, ptje_mater, ptje_alleg))
 #Remove NAs
-indic_sl <- na.omit(indic_sl)
+indic_sl_04 <- na.omit(indic_sl[['4']])
+indic_sl_08 <- na.omit(indic_sl[['8']])
 
-indic_sl <- indic_sl %>% sample_n(1000000)
+# indic_sl <- indic_sl %>% sample_n(1000000)
 
-hom <- homals(indic_sl,  ndim = 1, rank = 1, level = "numerical", sets = 0, active = TRUE,
+hom04 <- homals(indic_sl_04,  ndim = 1, rank = 1, level = "numerical", sets = 0, active = TRUE,
            eps = 1e-06, itermax = 1000, verbose = 0)
+
+hom08 <- homals(indic_sl_08,  ndim = 1, rank = 1, level = "numerical", sets = 0, active = TRUE,
+                eps = 1e-06, itermax = 1000, verbose = 0)
 
 #Revisar limite de uso de memoria R
 # memory.limit()
@@ -43,6 +49,30 @@ hom
 # ptje_esc   -0.3999909
 # ptje_hacin -0.2686852
 # ptje_mater  0.4118807
+
+hom04
+# Eigenvalues:
+#   D1 
+# 0.042 
+# 
+# Variable Loadings:
+#   D1
+# ptje_esc    0.2808857
+# ptje_hacin  0.3224852
+# ptje_mater -0.2996181
+# ptje_alleg -0.2520207
+
+hom08
+# Eigenvalues:
+#   D1 
+# 0.0378 
+# 
+# Variable Loadings:
+#   D1
+# ptje_esc    0.3169055
+# ptje_hacin  0.2881263
+# ptje_mater -0.3298117
+# ptje_alleg -0.1012507
 
 # Analisis de componentes principales
 

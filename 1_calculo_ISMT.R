@@ -49,14 +49,6 @@ base_rm <- base_rm %>%
   )
 )
 
-# Probar codigo con un subset
-# subset_rm <- base_rm %>% filter(id_zona_loc==1279)
-
-# seleccionar variables y definir tramos edades
-base_rm_hog <- base_rm %>%  select(provincia:cant_per, region) %>% 
-  # Se selecciona solo jefe de hogar
-  filter(personan == 1) 
-
 # Escolaridad -------------------------------------------------------------
 
 escolaridad <- base_rm_hog %>% mutate(
