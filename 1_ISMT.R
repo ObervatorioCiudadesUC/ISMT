@@ -1,4 +1,4 @@
-# Nombre Programa: 1_ISMT_precalculo.R
+# Nombre Programa: 1_ISMT.R
 # Ubicacion: GitHub/ISMT
 # Autor: Monica Flores
 # Fecha Creacion: 23/01/2018
@@ -15,23 +15,44 @@ library(tidyverse)
 library(glue)
 library(sf)
 
+
+# Instrucciones -----------------------------------------------------------
+
+# Para correr este script se necesitan: 
+# RDS de ka base censal procesada en el archivo 0_HomologacionDatosCenso
+# Shapefile de zonas censales (o manzanas) dentro del Área Urbana Consolidada (AUC) o ciudad
+# en caso de correrlo para una ciudad en específico.
+
+# Se debe correr un área geográfica a la vez, definiendo la region y año censal en el paso 0. 
+# Además en el paso 0 se debe definir el nombre y ubicacion del archivo AUC.
+
+# Importante: correr el script hasta el paso 3 y detenerse. 
+# Luego correr script 2_homals y redefinir los coeficientes en el paso 4.
+# Luego correr el script hasta el final.
+
+
+# 0. Definiciones iniciales --------------------------------------------------
+
+
 # Setear directorio local - Cambiar el nombre a la ubicacion de la carpeta de trabajo personal
-dir_loc <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018"
-ismt_dir <- glue("{dir_loc}/13_ISMT")
-censo_dir <- glue("{dir_loc}/14_Microdatos/Clean_Personas")
+dir_loc <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018" # Directorio local
+ismt_dir <- glue("{dir_loc}/13_ISMT") # Directorio ISMT
+censo_dir <- glue("{dir_loc}/14_Microdatos/Clean_Personas") # Directorio datos censo
+
 
 # Definir region y año censal a analizar
-r <- 13
-yyyy <- 2012
+reg <- 
+yyyy <- 2017
+AUC <- "AUC_Stgo_2012/AUC_Stgo_2012.shp" #Definir nombre archivo Zonas Censales AUC individual
 
-# Leer datos ------------------------------------------------------------
+# 1. Leer datos ------------------------------------------------------------
 
 # Leer archivo Censo variables homogeneas
-data <- readRDS(glue("{censo_dir}/TotalCenso1992_2017_Persona_Clean_R{r}.Rds")) %>%
+data <- readRDS(glue("{censo_dir}/Censo{yyyy}_Persona_Clean_R{reg}.Rds")) %>%
   filter(year==yyyy) # Elegir año
 
 # Leer shape Area Urbana Consolidada - acotar el analisis al area definida
-geo_r <- st_read(glue("{censo_dir}/Shapefiles/AUC_Stgo_2012")) %>% 
+geo_r <- st_read(glue("{censo_dir}/Shapefiles/{AUC}")) %>% 
   # Censo 2012 necesita rehacer manzent y geocode - no correr para otros años
   transmute(
     manzent = (CUT*1000000000) + (DISTRITO*10000000) + (1*1000000) + (ZONA*1000) + MANZANA, # Rehacer Manzent
@@ -39,9 +60,9 @@ geo_r <- st_read(glue("{censo_dir}/Shapefiles/AUC_Stgo_2012")) %>%
   ) 
 
 # Inner join shape con data censo
-data <- data %>%  inner_join(as.data.frame(geo_r), by =c("geocode", "manzent")) %>% select(-geometry)
+data <- data %>%  inner_join(as.data.frame(geo_r), by =c("geocode")) %>% select(-geometry)
 
-# Pre-calculo datos ISMT nivel hogar --------------------------------------------------
+# 2. Pre-calculo datos ISMT nivel hogar --------------------------------------------------
 
 data_clean <- data %>% 
   filter(parentesco == 1) %>% # Filtrar solo jefes de hogar
@@ -92,28 +113,33 @@ data_clean <- data %>%
   ) 
 
 # Guardar Dataset nivel hogar - ISMT
-data_clean %>% saveRDS(glue("{ismt_dir}/Output/Censo{yyyy}_Hogar_ISMT_R{r}.Rds"))
+data_clean %>% saveRDS(glue("{ismt_dir}/Output/Censo{yyyy}_Hogar_ISMT_R{reg}.Rds"))
+
+
+# 3. Calculo Homals (script 2_) ----------------------------------------------
 
 ####### Calcular homals GitHub/ISMT/2_homals.R #########
 
-# Leer archivo si se parte desde aquí 
-data_clean <- readRDS(glue("{ismt_dir}/Output/Censo{yyyy}_Hogar_ISMT_R{r}.Rds"))
+# Descomentar y leer archivo si se parte desde aquí 
+# data_clean <- readRDS(glue("{ismt_dir}/Output/Censo{yyyy}_Hogar_ISMT_R{reg}.Rds"))
 
-# Definir coeficientes ------------------------------------------------------------
+# 4. Definir coeficientes ------------------------------------------------------------
 
-# # Coeff homals RM - ISMT 2017
-# Esc <- 0.2783314  ### Escolaridad Puntaje
-# Viv <- 0.2867274  ### Calidad Vivienda
-# Hac <- 0.3271089  ### Hacinamiento
-# All <- 0.2522210  ### Allegamiento
+# Redefinir coeaficientes Homals segun resultado script
 
-# Coeff homals RM - ISMT 2012
-Esc <- 0.3333650  ### Escolaridad Puntaje
-Viv <- 0.3043160  ### Calidad Vivienda
-Hac <- 0.3233621  ### Hacinamiento
-All <- 0.1813503  ### Allegamiento
+# Coeff homals RM - ISMT 2017
+Esc <- 0.2783314  ### Escolaridad Puntaje
+Viv <- 0.2867274  ### Calidad Vivienda
+Hac <- 0.3271089  ### Hacinamiento
+All <- 0.2522210  ### Allegamiento
 
-# Calculo ISMT y GSE hogar ------------------------------------------------------------
+# # Coeff homals RM - ISMT 2012
+# Esc <- 0.3333650  ### Escolaridad Puntaje
+# Viv <- 0.3043160  ### Calidad Vivienda
+# Hac <- 0.3233621  ### Hacinamiento
+# All <- 0.1813503  ### Allegamiento
+
+# 5. Calculo ISMT y GSE hogar ------------------------------------------------------------
 
 # Calcular puntaje ISMT - pesos según homals
 data_clean <- data_clean %>%
@@ -145,20 +171,7 @@ data_clean <- data_clean %>%
     )
   )  
 
-# Histograma ISMT ---------------------------------------------------------
-
-# Plotear histograma ISMT
-hist1 <- as.data.frame(data_hog) %>% 
-  ggplot(aes(ptje_ISMT)) + 
-  geom_histogram(color = "grey", fill = "navy", lwd=0.1, binwidth = 0.01) 
-
-hist1 + labs(x = "Puntaje Normalizado", y = "Frecuencia",
-             title ="Histograma ISMT",
-             subtitle = "a Nivel de Hogar en la RM",
-             caption = NULL)
-
-
-# Summarise datasets ------------------------------------------------------
+# 6. Summarise datasets ------------------------------------------------------
 
 # Numero de personas por GSE por manzana
 data_GSE_mzn <- data_clean %>% 
@@ -228,7 +241,7 @@ data_gse_full <- data_clean %>% left_join(data_gse, by = "manzent")
 
 # Save datasets ----------------------------------------------------
 
-data_gse_full %>% saveRDS(glue("{ismt_dir}/Data/Output/ISMT{yyyy}_R{r}.Rds"))
+data_gse_full %>% saveRDS(glue("{ismt_dir}/Data/Output/ISMT{yyyy}_R{reg}.Rds"))
 
-geo_r %>% st_write(glue("{ismt_dir}/Output/Shapefiles/shape_ISMT{yyyy}_R{r}/shape_ISMT{yyyy}_R{r}.shp")) 
+geo_r %>% st_write(glue("{ismt_dir}/Output/Shapefiles/shape_ISMT{yyyy}_R{reg}/shape_ISMT{yyyy}_R{reg}.shp")) 
 
