@@ -14,10 +14,13 @@ library(glue)
 library(homals)
 
 # Setear directorio local
-dir_loc <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT/Output"
+ismt_dir <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT"
 
-# 
-indic_sl <- readRDS(glue("{dir_loc}/Censo2012_Hogar_ISMT_R13.Rds"))
+reg <- 8
+yyyy <- 2012
+
+# Leer datos
+indic_sl <- readRDS((glue("{ismt_dir}/Output/Censo{yyyy}_Hogar_ISMT_R{reg}.Rds")))
 
 # #Agregar puntaje allegamiento
 indic_sl <- indic_sl %>% select(ptje_esc, ptje_hacin, ptje_mater, ptje_alleg)
@@ -34,10 +37,4 @@ hom <- homals(indic_sl,  ndim = 1, rank = 1, level = "numerical", sets = 0, acti
 
 # Plotear
 hom
-
-# Analisis de componentes principales
-pca <- prcomp(indic_sl)
-pca
-summary(pca)
-
 

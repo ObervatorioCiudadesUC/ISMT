@@ -41,26 +41,25 @@ censo_dir <- glue("{dir_loc}/14_Microdatos/Clean_Personas") # Directorio datos c
 
 
 # Definir region y año censal a analizar
-reg <- 
-yyyy <- 2017
-AUC <- "AUC_Stgo_2012/AUC_Stgo_2012.shp" #Definir nombre archivo Zonas Censales AUC individual
+reg <- 8
+yyyy <- 2012
+AUC <- "AUC_Conce_2012" #Definir nombre carpeta Zonas Censales AUC individual
 
 # 1. Leer datos ------------------------------------------------------------
 
 # Leer archivo Censo variables homogeneas
-data <- readRDS(glue("{censo_dir}/Censo{yyyy}_Persona_Clean_R{reg}.Rds")) %>%
-  filter(year==yyyy) # Elegir año
+data <- readRDS(glue("{censo_dir}/Censo{yyyy}_Persona_Clean_R{reg}.Rds")) 
 
-# Leer shape Area Urbana Consolidada - acotar el analisis al area definida
-geo_r <- st_read(glue("{censo_dir}/Shapefiles/{AUC}")) %>% 
+# Leer shape Manzanas Area Urbana Consolidada
+geo_r <- st_read(glue("{ismt_dir}/Data/{AUC}")) %>% 
   # Censo 2012 necesita rehacer manzent y geocode - no correr para otros años
   transmute(
     manzent = (CUT*1000000000) + (DISTRITO*10000000) + (1*1000000) + (ZONA*1000) + MANZANA, # Rehacer Manzent
-    geocode = (CUT*1000000) + (DISTRITO*10000) + (1*1000) + (ZONA)  # Crear codigo zona
+    # geocode = (CUT*1000000) + (DISTRITO*10000) + (1*1000) + (ZONA)  # Crear codigo zona
   ) 
 
-# Inner join shape con data censo
-data <- data %>%  inner_join(as.data.frame(geo_r), by =c("geocode")) %>% select(-geometry)
+# Inner join shape con data censo - acotar el analisis al area definida
+data <- data %>%  inner_join(as.data.frame(geo_r), by =c("manzent")) %>% select(-geometry)
 
 # 2. Pre-calculo datos ISMT nivel hogar --------------------------------------------------
 
@@ -127,17 +126,23 @@ data_clean %>% saveRDS(glue("{ismt_dir}/Output/Censo{yyyy}_Hogar_ISMT_R{reg}.Rds
 
 # Redefinir coeaficientes Homals segun resultado script
 
-# Coeff homals RM - ISMT 2017
-Esc <- 0.2783314  ### Escolaridad Puntaje
-Viv <- 0.2867274  ### Calidad Vivienda
-Hac <- 0.3271089  ### Hacinamiento
-All <- 0.2522210  ### Allegamiento
+# # Coeff homals RM - ISMT 2017
+# Esc <- 0.2783314  ### Escolaridad Puntaje
+# Viv <- 0.2867274  ### Calidad Vivienda
+# Hac <- 0.3271089  ### Hacinamiento
+# All <- 0.2522210  ### Allegamiento
 
 # # Coeff homals RM - ISMT 2012
 # Esc <- 0.3333650  ### Escolaridad Puntaje
 # Viv <- 0.3043160  ### Calidad Vivienda
 # Hac <- 0.3233621  ### Hacinamiento
 # All <- 0.1813503  ### Allegamiento
+
+# Coeff homals Conce - ISMT 2012
+Esc <- 0.336361798  ### Escolaridad Puntaje
+Viv <- 0.305578431  ### Calidad Vivienda
+Hac <- 0.328680325  ### Hacinamiento
+All <- 0.002329197  ### Allegamiento
 
 # 5. Calculo ISMT y GSE hogar ------------------------------------------------------------
 
@@ -214,7 +219,7 @@ data_hog_summ <- data_clean %>%
 geo_r <- geo_r %>% left_join(data_hog_summ, by = "manzent") 
 
 # Plotear mapa con color por puntaje ISMT
-mapa_ISMT <- ggplot(data = geo_r, aes(fill = ISMTptj)) +
+mapa_ISMT <- ggplot(data = geo_r, aes(fill = ISMT_mzn)) +
   geom_sf(lwd = 0) +
   scale_fill_gradient(name = "Puntaje ISMT",
                       low = "#d53e4f",
@@ -241,7 +246,7 @@ data_gse_full <- data_clean %>% left_join(data_gse, by = "manzent")
 
 # Save datasets ----------------------------------------------------
 
-data_gse_full %>% saveRDS(glue("{ismt_dir}/Data/Output/ISMT{yyyy}_R{reg}.Rds"))
+data_gse_full %>% saveRDS(glue("{ismt_dir}/Output/ISMT{yyyy}_R{reg}.Rds"))
 
 geo_r %>% st_write(glue("{ismt_dir}/Output/Shapefiles/shape_ISMT{yyyy}_R{reg}/shape_ISMT{yyyy}_R{reg}.shp")) 
 
