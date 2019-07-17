@@ -16,8 +16,8 @@ library(homals)
 # Setear directorio local
 ismt_dir <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/13_ISMT"
 
-reg <- 8
-yyyy <- 2012
+reg <- 5
+yyyy <- 2017
 
 # Leer datos
 indic_sl <- readRDS((glue("{ismt_dir}/Output/Censo{yyyy}_Hogar_ISMT_R{reg}.Rds")))

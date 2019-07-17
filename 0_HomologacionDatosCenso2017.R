@@ -23,10 +23,10 @@ censo_dir <- "C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/14_Microdatos/Cl
 
 # Definir año censal y regiones
 yyyy <- 2017
-regiones <- c(8, 13) # cambiar las regiones
+regiones <- c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16) # cambiar las regiones
 
 # descomentar para aumentar limite memoria usando pendrive
-# memory.limit(12000)
+memory.limit(12000)
 
 
 # Iterar por cada region ----------------------------------------------------

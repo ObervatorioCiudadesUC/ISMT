@@ -19,7 +19,7 @@ library(sf)
 # Instrucciones -----------------------------------------------------------
 
 # Para correr este script se necesitan: 
-# RDS de ka base censal procesada en el archivo 0_HomologacionDatosCenso
+# RDS de la base censal procesada en el archivo 0_HomologacionDatosCenso
 # Shapefile de zonas censales (o manzanas) dentro del Área Urbana Consolidada (AUC) o ciudad
 # en caso de correrlo para una ciudad en específico.
 
@@ -163,7 +163,7 @@ C3 <- quant["64%",]
 C2 <- quant["79%",]
 ABC1 <- quant["100%",]
 
-# Calcular GSE persona
+# Calcular GSE HOGAR
 data_clean <- data_clean %>% 
   filter(!is.na(ptje_ISMT)) %>% 
   mutate(
