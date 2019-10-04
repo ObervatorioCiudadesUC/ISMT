@@ -43,13 +43,12 @@ for (reg in regiones) {
   # Estandarización 1992 ----------------------------------------------------
   
   
-  # Clacular candidad de hogares por vivienda
+  # Clacular candidad de personas por hogar
   npers1992 <- data %>% 
     filter(parentesco == 1) %>% 
     group_by(portafolio, vivienda) %>% 
     summarise(
-      # cant_hog = max(nhog),
-      cant_per = sum(tp),
+      cant_per = sum(tp), # cant personas
       n_dormitorios = sum(pieza_dormir) # suma dormitorios por hogar
     ) %>% 
     ungroup() 
