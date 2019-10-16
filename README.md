@@ -1,7 +1,7 @@
 # ISMT
 Índice Socio-Material y Territorial
 
-# Instrucciones -----------------------------------------------------------
+## Instrucciones 
 
 Para correr este script se necesitan: 
 - RDS de la base censal procesada en el archivo 0_HomologacionDatosCenso (elegir el año de interés).
