@@ -41,30 +41,30 @@ censo_dir <- glue("{dir_loc}/14_Microdatos/Clean_Personas") # Directorio datos c
 
 
 # Definir region y año censal a analizar
-reg <- 8
-yyyy <- 2012
-AUC <- "AUC_Conce_2012" #Definir nombre carpeta Zonas Censales AUC individual
+reg <- 13
+yyyy <- 2002
+# AUC <- "AUC_Conce_2012" #Definir nombre carpeta Zonas Censales AUC individual
 
 # 1. Leer datos ------------------------------------------------------------
 
 # Leer archivo Censo variables homogeneas
 data <- readRDS(glue("{censo_dir}/Censo{yyyy}_Persona_Clean_R{reg}.Rds")) 
 
-# Leer shape Manzanas Area Urbana Consolidada
-geo_r <- st_read(glue("{ismt_dir}/Data/{AUC}")) %>% 
-  # Censo 2012 necesita rehacer manzent y geocode - no correr para otros años
-  transmute(
-    manzent = (CUT*1000000000) + (DISTRITO*10000000) + (1*1000000) + (ZONA*1000) + MANZANA, # Rehacer Manzent
-    # geocode = (CUT*1000000) + (DISTRITO*10000) + (1*1000) + (ZONA)  # Crear codigo zona
-  ) 
+# # Leer shape Manzanas Area Urbana Consolidada
+# geo_r <- st_read(glue("{ismt_dir}/Data/{AUC}")) %>% 
+#   # Censo 2012 necesita rehacer manzent y geocode - no correr para otros años
+#   transmute(
+#     manzent = (CUT*1000000000) + (DISTRITO*10000000) + (1*1000000) + (ZONA*1000) + MANZANA, # Rehacer Manzent
+#     # geocode = (CUT*1000000) + (DISTRITO*10000) + (1*1000) + (ZONA)  # Crear codigo zona
+#   ) 
+# 
+# # Inner join shape con data censo - acotar el analisis al area definida
+# data <- data %>%  inner_join(as.data.frame(geo_r), by =c("manzent")) %>% select(-geometry)
 
-# Inner join shape con data censo - acotar el analisis al area definida
-data <- data %>%  inner_join(as.data.frame(geo_r), by =c("manzent")) %>% select(-geometry)
-
-# 2. Pre-calculo datos ISMT nivel hogar --------------------------------------------------
+# 2. Pre-calculo datos ISMT nivel VIVIENDA --------------------------------------------------
 
 data_clean <- data %>% 
-  filter(parentesco == 1) %>% # Filtrar solo jefes de hogar
+  filter(parentesco == 1 & nhogar==1) %>% # Filtrar solo jefes de hogar y 1 hogar por vivienda
   mutate(
       year = year,  
       region = region,
@@ -76,7 +76,7 @@ data_clean <- data %>%
       nhogar = nhogar,
       hogar = 1, # Dummy Hogar
       esc_jh = escolaridad, # Años escolaridad Jefe de Hogar
-      n_hog_alleg = (cant_hog - 1), # allegamiento
+      n_hog_alleg = (cant_hog - 1), # allegamiento ---- esto tiene que ser por vivienda
       ind_hacinam = case_when( # Indice Hacinamiento (variables a nivel vivienda)
         n_dormitorios >= 1 ~ cant_per/n_dormitorios,
         # Indice para 0 dormitorios se elige de tal manera que: 
@@ -113,6 +113,27 @@ data_clean <- data %>%
 
 # Guardar Dataset nivel hogar - ISMT
 data_clean %>% saveRDS(glue("{ismt_dir}/Output/Censo{yyyy}_Hogar_ISMT_R{reg}.Rds"))
+
+# Data para Fondecyt MG
+
+# # 2017
+# hacin_alleg <- data_clean %>%  
+#   group_by(geocode) %>% 
+#   summarise(
+#     nviv_hacin_17 = sum(hacin_med_crit, na.rm=T),
+#     n_hog_alleg_17 = sum(n_hog_alleg, na.rm=T)
+#   )
+# 
+# # 2002
+# hacin_alleg <- data_clean %>%  
+#   group_by(manzent) %>% 
+#   summarise(
+#     nviv_hacin_mzn02 = sum(hacin_med_crit, na.rm=T),
+#     n_hog_alleg_mzn02 = sum(n_hog_alleg, na.rm=T)
+#   )
+# 
+# # Guardar info 
+# hacin_alleg %>% saveRDS(glue("C:/Users/CEDEUS 18/Documents/CEDEUS/Monica - 2018/25_Fondecyt_MG/Analisis clasificacion/Variables/Hacin_Alleg_Censo{yyyy}.Rds"))
 
 
 # 3. Calculo Homals (script 2_) ----------------------------------------------
